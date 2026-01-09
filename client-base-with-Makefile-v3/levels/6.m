@@ -1,0 +1,14 @@
+PASSO 0
+POS 2 10
+D
+D
+D
+D
+D
+D
+A
+A
+A
+A
+A
+A
