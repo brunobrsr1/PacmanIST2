@@ -568,8 +568,15 @@ void* host_thread(void* arg) {
     fprintf(stderr, "HOST THREAD: SIGUSR1 configurado\n");
     
     // Criar pipe de registo
-    unlink(register_pipe_name);
+    // Tentar remover um FIFO anterior nosso; se não existir, ignorar.
+    if (unlink(register_pipe_name) == -1 && errno != ENOENT) {
+        // Não conseguimos remover algo que lá está (provavelmente não é nosso): falhar.
+        perror("Erro ao remover pipe de registo");
+        return NULL;
+    }
+
     if (mkfifo(register_pipe_name, 0666) == -1) {
+        // Qualquer erro aqui é fatal, porque já limpámos o caminho.
         perror("Erro ao criar pipe de registo");
         return NULL;
     }
@@ -620,6 +627,10 @@ void* host_thread(void* arg) {
         
         if (read(reg_fd, req_pipe, 40) != 40) continue;
         if (read(reg_fd, notif_pipe, 40) != 40) continue;
+
+        // Garantir terminação em '\0' para uso seguro em open()
+        req_pipe[39] = '\0';
+        notif_pipe[39] = '\0';
         
         // Criar pedido de conexão
         connection_request_t req;
@@ -726,7 +737,15 @@ int main(int argc, char** argv) {
     
     levels_dir = argv[1];
     int max_games = atoi(argv[2]);
-    strncpy(register_pipe_name, argv[3], sizeof(register_pipe_name) - 1);
+    // Se o utilizador passar apenas um nome, construímos um caminho único
+    // por utilizador em /tmp, para evitar colisões entre alunos no sigma.
+    // Se passar um caminho absoluto (p.ex. começado por '/'), usamos tal como está.
+    if (argv[3][0] == '/') {
+        snprintf(register_pipe_name, sizeof(register_pipe_name), "%s", argv[3]);
+    } else {
+        uid_t uid = getuid();
+        snprintf(register_pipe_name, sizeof(register_pipe_name), "/tmp/%d_%s", (int)uid, argv[3]);
+    }
     
     if (max_games <= 0) {
         fprintf(stderr, "max_games deve ser maior que 0\n");

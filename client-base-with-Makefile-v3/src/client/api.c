@@ -35,7 +35,7 @@ int pacman_connect(char const *req_pipe_path, char const *notif_pipe_path, char 
     }
     
     // Abrir pipe do servidor (EXIGÊNCIA: já deve existir)
-    int server_fd = open(server_pipe_path, O_WRONLY);
+    int server_fd = open(server_pipe_path, O_WRONLY | O_NONBLOCK);
     if (server_fd == -1) {
         debug("Erro ao abrir pipe do servidor: %s\n", server_pipe_path);
         unlink(req_pipe_path);
@@ -45,10 +45,16 @@ int pacman_connect(char const *req_pipe_path, char const *notif_pipe_path, char 
     
     // Enviar pedido de conexão (EXIGÊNCIA: formato OP_CODE=1 + 2 pipes)
     char op_code = OP_CODE_CONNECT; // 1
-    
+
+    // Strings de tamanho fixo 40 bytes, preenchidas com '\0'
+    char req_buf[MAX_PIPE_PATH_LENGTH] = {0};
+    char notif_buf[MAX_PIPE_PATH_LENGTH] = {0};
+    strncpy(req_buf, req_pipe_path, MAX_PIPE_PATH_LENGTH - 1);
+    strncpy(notif_buf, notif_pipe_path, MAX_PIPE_PATH_LENGTH - 1);
+
     if (write(server_fd, &op_code, 1) != 1 ||
-        write(server_fd, req_pipe_path, MAX_PIPE_PATH_LENGTH) != MAX_PIPE_PATH_LENGTH ||
-        write(server_fd, notif_pipe_path, MAX_PIPE_PATH_LENGTH) != MAX_PIPE_PATH_LENGTH) {
+        write(server_fd, req_buf, MAX_PIPE_PATH_LENGTH) != MAX_PIPE_PATH_LENGTH ||
+        write(server_fd, notif_buf, MAX_PIPE_PATH_LENGTH) != MAX_PIPE_PATH_LENGTH) {
         debug("Erro ao enviar pedido de conexão\n");
         close(server_fd);
         unlink(req_pipe_path);

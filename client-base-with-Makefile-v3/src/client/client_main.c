@@ -86,7 +86,7 @@ int main(int argc, char* argv[]) {
     }
 
     const char* client_id = argv[1];
-    const char* register_pipe = argv[2];
+    const char* register_pipe_name = argv[2];
     const char* commands_file = (argc == 4) ? argv[3] : NULL;
 
     FILE* cmd_fp = NULL;
@@ -100,24 +100,39 @@ int main(int argc, char* argv[]) {
 
     char req_pipe_path[MAX_PIPE_PATH_LENGTH];
     char notif_pipe_path[MAX_PIPE_PATH_LENGTH];
+    char register_pipe_path[MAX_PIPE_PATH_LENGTH];
 
+    uid_t uid = getuid();
+
+    // Tornar FIFOs de pedido/notificação únicos por utilizador, para evitar
+    // colisões com FIFOs deixados por outros alunos em /tmp.
     snprintf(req_pipe_path, MAX_PIPE_PATH_LENGTH,
-             "/tmp/%s_request", client_id);
+             "/tmp/%d_%s_request", (int)uid, client_id);
 
     snprintf(notif_pipe_path, MAX_PIPE_PATH_LENGTH,
-             "/tmp/%s_notification", client_id);
+             "/tmp/%d_%s_notification", (int)uid, client_id);
+
+    // O cliente deve construir exatamente o mesmo caminho que o servidor
+    // para o FIFO de registo: per-user em /tmp quando recebe apenas um nome.
+    if (register_pipe_name[0] == '/') {
+        snprintf(register_pipe_path, MAX_PIPE_PATH_LENGTH,
+                 "%s", register_pipe_name);
+    } else {
+        snprintf(register_pipe_path, MAX_PIPE_PATH_LENGTH,
+                 "/tmp/%d_%s", (int)uid, register_pipe_name);
+    }
 
     open_debug_file("client-debug.log");
 
     debug("Connecting to server...\n");
 
-    if (pacman_connect(req_pipe_path, notif_pipe_path, register_pipe) != 0) {
+    int conn_res = pacman_connect(req_pipe_path, notif_pipe_path, register_pipe_path);
+
+    if (conn_res != 0) {
         debug("Failed to connect to server\n");
         if (cmd_fp) fclose(cmd_fp);
         return 1;
     }
-
-    debug("Connected successfully\n");
 
     // Criar thread para receber atualizações
     pthread_t receiver_thread_id;
