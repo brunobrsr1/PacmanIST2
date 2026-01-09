@@ -107,6 +107,9 @@ static void send_board_update(int notif_fd, board_t* board, int points, int game
 static void sigusr1_handler(int sig) {
     (void)sig;
     sigusr1_received = 1;
+    // Debug mínimo para confirmar que o sinal é recebido
+    const char msg[] = "SIGUSR1 handler called\n";
+    write(STDERR_FILENO, msg, sizeof(msg) - 1);
 }
 
 // Estrutura para armazenar clientes ordenados por pontuação
@@ -117,7 +120,10 @@ typedef struct {
 
 static void generate_top5_log() {
     FILE* log = fopen("top5_clients.log", "w");
-    if (!log) return;
+    if (!log) {
+        perror("Erro ao criar top5_clients.log");
+        return;
+    }
     
     fprintf(log, "=== TOP 5 CLIENTES POR PONTUAÇÃO ===\n");
     
@@ -161,6 +167,7 @@ static void generate_top5_log() {
     }
     
     fclose(log);
+    fprintf(stderr, "SIGUSR1: top5_clients.log gerado com %d clientes ativos.\n", count);
 }
 
 // Estruturas para o jog
@@ -545,6 +552,12 @@ void* host_thread(void* arg) {
     
     fprintf(stderr, "HOST THREAD: Iniciada\n");
     
+    // Esta thread é a única que deve receber SIGUSR1: desbloqueia-o aqui
+    sigset_t set;
+    sigemptyset(&set);
+    sigaddset(&set, SIGUSR1);
+    pthread_sigmask(SIG_UNBLOCK, &set, NULL);
+    
     // Configurar SIGUSR1 APENAS nesta thread
     struct sigaction sa;
     sa.sa_handler = sigusr1_handler;
@@ -585,7 +598,19 @@ void* host_thread(void* arg) {
         ssize_t bytes = read(reg_fd, &op_code, 1);
         
         if (bytes <= 0) {
-            if (bytes == 0) continue;
+            if (bytes == 0) {
+                // EOF no FIFO de registo: não há clientes neste momento
+                continue;
+            }
+
+            // bytes < 0: erro na leitura
+            if (errno == EINTR) {
+                // Leitura interrompida por sinal (por exemplo, SIGUSR1).
+                // Voltar ao topo do ciclo para tratar sigusr1_received.
+                continue;
+            }
+
+            // Erro não recuperável: terminar thread anfitriã
             break;
         }
         
@@ -709,7 +734,13 @@ int main(int argc, char** argv) {
     }
     
     srand((unsigned int)time(NULL));
-    
+
+    // Bloquear SIGUSR1 na thread principal; apenas a anfitriã o irá escutar
+    sigset_t set;
+    sigemptyset(&set);
+    sigaddset(&set, SIGUSR1);
+    pthread_sigmask(SIG_BLOCK, &set, NULL);
+
     // Inicializar buffer
     buffer_init(&connection_buffer, MAX_PENDING_CONNECTIONS);
     
