@@ -1,6 +1,0 @@
-PASSO 1
-POS 1 1
-D
-D
-S
-S

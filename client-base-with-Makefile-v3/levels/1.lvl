@@ -1,5 +1,4 @@
 #LEVEL 1
-<<<<<<< HEAD
 DIM 6 6
 TEMPO 100
 MON 1.m
@@ -9,16 +8,3 @@ XoXoXX
 Xooo@X
 XooooX
 XXoXXX
-=======
-DIM 8 8
-TEMPO 500
-MON 1.m
-XXXXXXXX
-XPooooXX
-XoXXXoXX
-XoooooXX
-XXXoXXXX
-XooooooX
-Xoooo@oX
-XXXXXXXX
->>>>>>> 845ec68967d1556af6ec90f133934a87b4257e33

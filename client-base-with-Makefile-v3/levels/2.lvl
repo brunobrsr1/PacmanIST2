@@ -1,14 +1,13 @@
 #LEVEL 2
-DIM 6 6
+DIM 14 9
 TEMPO 100
-MON 2.m
-XXXXXX
-XoooXX
-XoXoXX
-Xooo@X
-XooooX
-<<<<<<< HEAD
-XXoXXX
-=======
-XXoXXX
->>>>>>> 845ec68967d1556af6ec90f133934a87b4257e33
+MON 2.m 3.m
+XXXXXXXXXXXXXX
+XooooooooooooX
+XooooooooooooX
+XooXXXooXXXooX
+XooXooooooXooX
+XooXXXXXXXXooX
+Xoooooo@oooooX
+XooooooooooooX
+XXXXXXXXXXXXXX

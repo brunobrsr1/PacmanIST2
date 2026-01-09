@@ -1,10 +1,7 @@
-PASSO 4
-POS 5 2
+PASSO 1
+POS 4 4
+D
+D
 W
 W
-A
-<<<<<<< HEAD
 R
-=======
-R
->>>>>>> 845ec68967d1556af6ec90f133934a87b4257e33

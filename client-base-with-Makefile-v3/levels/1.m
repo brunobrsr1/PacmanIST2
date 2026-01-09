@@ -1,6 +1,6 @@
-PASSO 5
-POS 4 2
+PASSO 4
+POS 2 5
+W
+W
 A
-D
-T 1
 R
