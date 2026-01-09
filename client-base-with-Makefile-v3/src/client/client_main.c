@@ -21,9 +21,17 @@ static void* receiver_thread(void* arg) {
     (void)arg;
 
     while (true) {
-          Board new_board = receive_board_update();
+        // Verificar se já foi pedido para parar (por exemplo, tecla 'Q')
+        pthread_mutex_lock(&mutex);
+        if (stop_execution) {
+            pthread_mutex_unlock(&mutex);
+            break;
+        }
+        pthread_mutex_unlock(&mutex);
 
-          pthread_mutex_lock(&mutex);
+        Board new_board = receive_board_update();
+
+        pthread_mutex_lock(&mutex);
 
         // Sem atualização (pipe não tinha dados agora) -> continuar a aguardar
         if (!new_board.data && new_board.game_over == 0) {
@@ -171,6 +179,9 @@ int main(int argc, char* argv[]) {
 
         if (command == 'Q') {
             debug("Client pressed 'Q', quitting game\n");
+            pthread_mutex_lock(&mutex);
+            stop_execution = true;
+            pthread_mutex_unlock(&mutex);
             break;
         }
 
@@ -179,11 +190,11 @@ int main(int argc, char* argv[]) {
         pacman_play(command);
     }
 
-    debug("Disconnecting...\n");
-    pacman_disconnect();
-
     // Aguardar thread de receção
     pthread_join(receiver_thread_id, NULL);
+
+    debug("Disconnecting...\n");
+    pacman_disconnect();
 
     if (cmd_fp)
         fclose(cmd_fp);
