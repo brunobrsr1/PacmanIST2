@@ -625,39 +625,53 @@ void* worker_thread(void* arg) {
     while (1) {
         // Retirar pedido do buffer (bloqueia se vazio)
         connection_request_t req = buffer_get(&connection_buffer);
-        
-        // Abrir pipes do cliente
+
+        // Esperar até existir um slot de sessão livre (bloqueia novos pedidos quando max_games está cheio)
+        int session_idx = -1;
+        while (1) {
+            pthread_mutex_lock(&sessions_mutex);
+            for (int i = 0; i < max_sessions; i++) {
+                if (!sessions[i].active) {
+                    session_idx = i;
+                    sessions[i].active = 1;      // reservar slot
+                    sessions[i].client_id = req.client_id;
+                    sessions[i].points = 0;
+                    break;
+                }
+            }
+            pthread_mutex_unlock(&sessions_mutex);
+
+            if (session_idx != -1) {
+                break; // já temos sessão reservada para este cliente
+            }
+
+            // Nenhum slot livre ainda: aguardar um pouco antes de voltar a tentar
+            sleep_ms(50);
+        }
+
+        // Abrir pipes do cliente apenas depois de garantir uma sessão
         int req_fd = open(req.req_pipe_path, O_RDONLY | O_NONBLOCK);
         int notif_fd = open(req.notif_pipe_path, O_WRONLY);
-        
+
         if (req_fd == -1 || notif_fd == -1) {
             if (req_fd != -1) close(req_fd);
             if (notif_fd != -1) close(notif_fd);
+
+            // Libertar slot de sessão porque o cliente já não está disponível
+            pthread_mutex_lock(&sessions_mutex);
+            sessions[session_idx].active = 0;
+            sessions[session_idx].client_id = 0;
+            sessions[session_idx].points = 0;
+            pthread_mutex_unlock(&sessions_mutex);
             continue;
         }
-        
-        // Encontrar slot livre para sessão
-        int session_idx = -1;
+
+        // Guardar descritores de ficheiro na sessão
         pthread_mutex_lock(&sessions_mutex);
-        for (int i = 0; i < max_sessions; i++) {
-            if (!sessions[i].active) {
-                session_idx = i;
-                sessions[i].client_id = req.client_id;
-                sessions[i].req_fd = req_fd;
-                sessions[i].notif_fd = notif_fd;
-                sessions[i].active = 1;
-                sessions[i].points = 0;  // Inicializar pontuação
-                break;
-            }
-        }
+        sessions[session_idx].req_fd = req_fd;
+        sessions[session_idx].notif_fd = notif_fd;
         pthread_mutex_unlock(&sessions_mutex);
-        
-        if (session_idx == -1) {
-            close(req_fd);
-            close(notif_fd);
-            continue;
-        }
-        
+
         // Enviar confirmação (OP_CODE=1, result=0)
         char response[2] = {OP_CODE_CONNECT, 0};
         write(notif_fd, response, 2);
