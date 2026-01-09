@@ -32,27 +32,35 @@ static void* receiver_thread(void* arg) {
             continue;
         }
 
-        // Fim de jogo (pipe fechado ou game_over explícito)
-        if (new_board.game_over == 1) {
+        // Caso especial: EOF do pipe (game_over==1 mas sem board.data).
+        // Usamos o último tabuleiro conhecido e apenas marcamos GAME OVER.
+        if (!new_board.data && new_board.game_over == 1) {
+            board.game_over = 1;
+            draw_board_client(board);
+            refresh_screen();
             stop_execution = true;
             pthread_mutex_unlock(&mutex);
-            if (board.data && board.data != new_board.data) {
-                free(board.data);
-                board.data = NULL;
-            }
             break;
         }
 
-        // Atualizar variáveis globais
+        // Atualizar variáveis globais (inclui casos de vitória e game over)
         if (board.data && board.data != new_board.data) {
             free(board.data);
         }
         board = new_board;
         tempo = board.tempo;
 
-        // Desenhar tabuleiro
+        // Desenhar tabuleiro com o estado mais recente
+        // (se board.game_over == 1, draw_board_client mostra "GAME OVER")
         draw_board_client(board);
         refresh_screen();
+
+        // Se o jogo terminou (game_over == 1), sinalizar paragem e sair do ciclo
+        if (board.game_over == 1) {
+            stop_execution = true;
+            pthread_mutex_unlock(&mutex);
+            break;
+        }
 
         pthread_mutex_unlock(&mutex);
     }
