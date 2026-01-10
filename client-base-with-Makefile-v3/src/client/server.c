@@ -70,16 +70,33 @@ static int extract_client_id(const char* pipe_path) {
     const char* prefix = "/tmp/";
     const char* start = strstr(pipe_path, prefix);
     if (!start) return -1;
-    
-    start += strlen(prefix);
-    char id_str[20];
+
+    // Formato esperado: /tmp/<uid>_<clientId>_request
+    start += strlen(prefix); // agora em cima de <uid>_<clientId>_request
+
+    // Saltar o UID (sequência inicial de dígitos)
+    while (*start >= '0' && *start <= '9') {
+        start++;
+    }
+
+    // Esperar um '_'
+    if (*start != '_') {
+        return -1;
+    }
+    start++; // agora em cima de <clientId>
+
+    char id_str[32];
     int i = 0;
-    while (start[i] >= '0' && start[i] <= '9' && i < 19) {
+    while (start[i] != '\0' && start[i] != '_' && i < (int)sizeof(id_str) - 1) {
         id_str[i] = start[i];
         i++;
     }
     id_str[i] = '\0';
-    
+
+    if (i == 0) {
+        return -1;
+    }
+
     return atoi(id_str);
 }
 
@@ -753,6 +770,10 @@ int main(int argc, char** argv) {
     }
     
     srand((unsigned int)time(NULL));
+
+    // Evitar que o servidor termine com SIGPIPE quando um cliente fecha o FIFO
+    // de notificações enquanto ainda há tentativas de escrita.
+    signal(SIGPIPE, SIG_IGN);
 
     // Bloquear SIGUSR1 na thread principal; apenas a anfitriã o irá escutar
     sigset_t set;
