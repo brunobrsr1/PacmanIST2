@@ -13,7 +13,7 @@ typedef struct {
     int client_id;
 } connection_request_t;
 
-// Buffer produtor-consumidor (COM SEMÁFOROS - exigência do enunciado)
+// Buffer produtor-consumidor
 typedef struct {
     connection_request_t *buffer;
     int size;
@@ -34,7 +34,7 @@ typedef struct {
     pthread_t game_thread;
 } client_session_t;
 
-// Funções do buffer (exigidas)
+// Funções do buffer
 void buffer_init(request_buffer_t *buf, int size);
 void buffer_destroy(request_buffer_t *buf);
 void buffer_put(request_buffer_t *buf, connection_request_t req);

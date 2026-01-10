@@ -104,16 +104,13 @@ int main(int argc, char* argv[]) {
 
     uid_t uid = getuid();
 
-    // Tornar FIFOs de pedido/notificação únicos por utilizador, para evitar
-    // colisões com FIFOs deixados por outros alunos em /tmp.
     snprintf(req_pipe_path, MAX_PIPE_PATH_LENGTH,
              "/tmp/%d_%s_request", (int)uid, client_id);
 
     snprintf(notif_pipe_path, MAX_PIPE_PATH_LENGTH,
              "/tmp/%d_%s_notification", (int)uid, client_id);
 
-    // O cliente deve construir exatamente o mesmo caminho que o servidor
-    // para o FIFO de registo: per-user em /tmp quando recebe apenas um nome.
+
     if (register_pipe_name[0] == '/') {
         snprintf(register_pipe_path, MAX_PIPE_PATH_LENGTH,
                  "%s", register_pipe_name);
@@ -142,8 +139,6 @@ int main(int argc, char* argv[]) {
     terminal_init();
     set_timeout(500);
     
-    // Desenhar apenas se já temos dados (será desenhado pela receiver_thread)
-    // draw_board_client(board);  // Removido - board ainda está vazio
     refresh_screen();
 
     char command;

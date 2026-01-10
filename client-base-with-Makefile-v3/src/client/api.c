@@ -20,9 +20,8 @@ struct Session {
 
 static struct Session session = {.id = -1, .req_pipe = -1, .notif_pipe = -1};
 
-// Implementação EXATA conforme protocolo
 int pacman_connect(char const *req_pipe_path, char const *notif_pipe_path, char const *server_pipe_path) {
-    // Criar pipes (EXIGÊNCIA: cliente cria os pipes)
+    // Criar pipes
     if (mkfifo(req_pipe_path, 0666) == -1 && errno != EEXIST) {
         debug("Erro ao criar pipe de pedidos: %s\n", req_pipe_path);
         return 1;
@@ -34,7 +33,7 @@ int pacman_connect(char const *req_pipe_path, char const *notif_pipe_path, char 
         return 1;
     }
     
-    // Abrir pipe do servidor (EXIGÊNCIA: já deve existir)
+    // Abrir pipe do servidor
     int server_fd = open(server_pipe_path, O_WRONLY | O_NONBLOCK);
     if (server_fd == -1) {
         debug("Erro ao abrir pipe do servidor: %s\n", server_pipe_path);
@@ -43,7 +42,7 @@ int pacman_connect(char const *req_pipe_path, char const *notif_pipe_path, char 
         return 1;
     }
     
-    // Enviar pedido de conexão (EXIGÊNCIA: formato OP_CODE=1 + 2 pipes)
+    // Enviar pedido de conexão (formato OP_CODE=1 + 2 pipes)
     char op_code = OP_CODE_CONNECT; // 1
 
     // Strings de tamanho fixo 40 bytes, preenchidas com '\0'
@@ -64,7 +63,7 @@ int pacman_connect(char const *req_pipe_path, char const *notif_pipe_path, char 
     
     close(server_fd);
     
-    // Aguardar resposta (EXIGÊNCIA: pelo pipe de notificações)
+    // Aguardar resposta (pelo pipe de notificações)
     int notif_fd = open(notif_pipe_path, O_RDONLY);
     if (notif_fd == -1) {
         debug("Erro ao abrir pipe de notificações para leitura\n");
@@ -84,7 +83,7 @@ int pacman_connect(char const *req_pipe_path, char const *notif_pipe_path, char 
     
     close(notif_fd);
     
-    // Verificar resposta (EXIGÊNCIA: OP_CODE=1, result=0)
+    // Verificar resposta (OP_CODE=1, result=0)
     if (response[0] != OP_CODE_CONNECT || response[1] != 0) {
         debug("Conexão rejeitada pelo servidor\n");
         unlink(req_pipe_path);
@@ -110,7 +109,7 @@ int pacman_connect(char const *req_pipe_path, char const *notif_pipe_path, char 
         return 1;
     }
     
-    // Guardar paths (EXIGÊNCIA: para desconexão)
+    // Guardar paths (para desconexão)
     strncpy(session.req_pipe_path, req_pipe_path, MAX_PIPE_PATH_LENGTH);
     strncpy(session.notif_pipe_path, notif_pipe_path, MAX_PIPE_PATH_LENGTH);
     
@@ -118,14 +117,13 @@ int pacman_connect(char const *req_pipe_path, char const *notif_pipe_path, char 
     return 0;
 }
 
-// Implementação EXATA conforme protocolo
 void pacman_play(char command) {
     if (session.req_pipe == -1) {
         debug("Tentativa de jogar sem conexão ativa\n");
         return;
     }
     
-    // Enviar comando (EXIGÊNCIA: OP_CODE=3 + comando)
+    // Enviar comando (OP_CODE=3 + comando)
     char op_code = OP_CODE_PLAY; // 3
     char msg[2] = {op_code, command};
     
@@ -136,25 +134,24 @@ void pacman_play(char command) {
     debug("Comando enviado: %c\n", command);
 }
 
-// Implementação EXATA conforme protocolo
 int pacman_disconnect() {
     if (session.req_pipe == -1) {
         debug("Tentativa de desconectar sem conexão ativa\n");
         return 1;
     }
     
-    // Enviar pedido de desconexão (EXIGÊNCIA: OP_CODE=2)
+    // Enviar pedido de desconexão (OP_CODE=2)
     char op_code = OP_CODE_DISCONNECT; // 2
     
     if (write(session.req_pipe, &op_code, 1) != 1) {
         debug("Erro ao enviar pedido de desconexão\n");
     }
     
-    // Fechar pipes (EXIGÊNCIA: sem esperar por respostas)
+    // Fechar pipes (sem esperar por respostas)
     close(session.req_pipe);
     close(session.notif_pipe);
     
-    // Remover pipes (EXIGÊNCIA: apagar named pipes do cliente)
+    // Remover pipes (apagar named pipes do cliente)
     unlink(session.req_pipe_path);
     unlink(session.notif_pipe_path);
     
@@ -168,7 +165,6 @@ int pacman_disconnect() {
     return 0;
 }
 
-// Implementação EXATA conforme protocolo
 Board receive_board_update(void) {
     Board board = {0};
     
@@ -201,7 +197,7 @@ Board receive_board_update(void) {
         return board;
     }
     
-    // Ler dados do tabuleiro (EXIGÊNCIA: formato específico)
+    // Ler dados do tabuleiro
     if (read(session.notif_pipe, &board.width, sizeof(int)) != sizeof(int) ||
         read(session.notif_pipe, &board.height, sizeof(int)) != sizeof(int) ||
         read(session.notif_pipe, &board.tempo, sizeof(int)) != sizeof(int) ||
