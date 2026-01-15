@@ -397,6 +397,12 @@ void kill_ghost(board_t* board, int ghost_index) {
     }
     
     ghost_t* ghost = &board->ghosts[ghost_index];
+    
+    // Check if ghost is already eliminated or has invalid position
+    if (ghost->pos_x < 0 || ghost->pos_y < 0) {
+        return; // Ghost already eliminated
+    }
+    
     int index = ghost->pos_y * board->width + ghost->pos_x;
     
     // Remove ghost from board
