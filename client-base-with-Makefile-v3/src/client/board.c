@@ -403,6 +403,11 @@ void kill_ghost(board_t* board, int ghost_index) {
         return; // Ghost already eliminated
     }
     
+    // Additional bounds checking before accessing board
+    if (ghost->pos_x >= board->width || ghost->pos_y >= board->height) {
+        return; // Position out of bounds
+    }
+    
     int index = ghost->pos_y * board->width + ghost->pos_x;
     
     // Remove ghost from board
