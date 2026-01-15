@@ -1,3 +1,5 @@
 client-base-with-Makefile-v3/client-debug.log
 *.log
 .github
+client-base-with-Makefile-v3/bin/
+client-base-with-Makefile-v3/obj/
