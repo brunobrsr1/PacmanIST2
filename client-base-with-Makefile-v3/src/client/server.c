@@ -16,6 +16,10 @@
 #include <dirent.h>
 #include <time.h>
 #include <sys/select.h>
+#include <limits.h>
+
+// ==================== COMANDOS ====================
+#define KILL_MONSTER_CMD 'M'
 
 // ==================== VARIÁVEIS GLOBAIS ====================
 static request_buffer_t connection_buffer;
@@ -250,6 +254,40 @@ static void* pacman_server_thread(void* arg) {
                         continue;
                     }
                     
+                    // Processar comando 'M' para matar monstro
+                    if (command == KILL_MONSTER_CMD) {
+                        pthread_rwlock_wrlock(&board->state_lock);
+                        
+                        // Encontrar e eliminar o monstro mais próximo do Pacman
+                        if (board->n_ghosts > 0 && pacman->alive) {
+                            int closest_ghost = -1;
+                            int min_distance = INT_MAX;
+                            
+                            for (int i = 0; i < board->n_ghosts; i++) {
+                                ghost_t* ghost = &board->ghosts[i];
+                                // Verificar se o fantasma está ativo (posição válida)
+                                if (ghost->pos_x >= 0 && ghost->pos_y >= 0) {
+                                    int dx = ghost->pos_x - pacman->pos_x;
+                                    int dy = ghost->pos_y - pacman->pos_y;
+                                    int distance = dx * dx + dy * dy;
+                                    
+                                    if (distance < min_distance) {
+                                        min_distance = distance;
+                                        closest_ghost = i;
+                                    }
+                                }
+                            }
+                            
+                            if (closest_ghost >= 0) {
+                                kill_ghost(board, closest_ghost);
+                                fprintf(stderr, "Comando M recebido: Monstro %d eliminado!\n", closest_ghost);
+                            }
+                        }
+                        
+                        pthread_rwlock_unlock(&board->state_lock);
+                        continue;
+                    }
+                    
                     command_t cmd;
                     cmd.command = command;
                     cmd.turns = 1;
@@ -304,6 +342,14 @@ static void* ghost_server_thread(void* arg) {
             break;
         }
         pthread_mutex_unlock(&control->mutex);
+        
+        // Verificar se o fantasma foi eliminado
+        pthread_rwlock_rdlock(&board->state_lock);
+        if (ghost->pos_x < 0 || ghost->pos_y < 0) {
+            pthread_rwlock_unlock(&board->state_lock);
+            break; // Fantasma foi eliminado, encerrar thread
+        }
+        pthread_rwlock_unlock(&board->state_lock);
         
         sleep_ms(board->tempo * (1 + ghost->passo));
 

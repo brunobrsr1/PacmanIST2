@@ -391,6 +391,22 @@ void kill_pacman(board_t* board, int pacman_index) {
     pac->alive = 0;
 }
 
+void kill_ghost(board_t* board, int ghost_index) {
+    if (ghost_index < 0 || ghost_index >= board->n_ghosts) {
+        return; // Invalid ghost index
+    }
+    
+    ghost_t* ghost = &board->ghosts[ghost_index];
+    int index = ghost->pos_y * board->width + ghost->pos_x;
+    
+    // Remove ghost from board
+    board->board[index].content = ' ';
+    
+    // Mark ghost as eliminated by setting position to invalid coordinates
+    ghost->pos_x = -1;
+    ghost->pos_y = -1;
+}
+
 int load_pacman(board_t* board) {
     board->board[1 * board->width + 1].content = 'P';
     board->pacmans[0].pos_x = 1;

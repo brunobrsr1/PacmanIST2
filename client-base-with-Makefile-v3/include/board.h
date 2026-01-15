@@ -73,6 +73,9 @@ int move_ghost(board_t* board, int ghost_index, command_t* command);
 /*Remove an object (Pacman)*/
 void kill_pacman(board_t* board, int pacman_index);
 
+/*Remove a ghost (Monster)*/
+void kill_ghost(board_t* board, int ghost_index);
+
 /*Adds a pacman to the board from a file*/
 int load_pacman(board_t* board);
 
