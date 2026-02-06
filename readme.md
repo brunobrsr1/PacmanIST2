@@ -59,8 +59,3 @@ Redefinir o tratamento do sinal **SIGUSR1** no servidor:
 - Apenas a **tarefa anfitriã** deve escutar o sinal.
 - As outras tarefas devem inibir o sinal usando `pthread_sigmask(SIG_BLOCK, ...)`.
 - Ao receber `SIGUSR1`, o servidor deve gerar um ficheiro com a lista dos 5 clientes ligados com maior pontuação.
-
-## 5. Submissão e Avaliação
-- **Prazo:** 9 de Janeiro às 23h59 via Fénix.
-- **Formato:** Ficheiro ZIP com código fonte e Makefile.
-- **Nota:** O projeto deve compilar e correr corretamente no cluster Sigma.
